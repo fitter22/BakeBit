@@ -38,6 +38,7 @@ import bakebit_128_64_oled as oled
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
+from time import time
 import time
 import sys
 import subprocess
@@ -62,7 +63,12 @@ oled.init()  #initialze SEEED OLED display
 oled.setNormalDisplay()      #Set display to normal mode (i.e non-inverse mode)
 oled.setHorizontalMode()
 
-global drawing 
+global lastPressed
+lastPressed = 0
+global screenOffInterval
+screenOffInterval = 60
+
+global drawing
 drawing = False
 
 global image
@@ -71,7 +77,7 @@ global draw
 draw = ImageDraw.Draw(image)
 global fontb24
 fontb24 = ImageFont.truetype('DejaVuSansMono-Bold.ttf', 24);
-global font14 
+global font14
 font14 = ImageFont.truetype('DejaVuSansMono.ttf', 14);
 global smartFont
 smartFont = ImageFont.truetype('DejaVuSansMono-Bold.ttf', 10);
@@ -123,8 +129,8 @@ def draw_page():
     lock.acquire()
     drawing = True
     lock.release()
-    
-    # Draw a black filled box to clear the image.            
+
+    # Draw a black filled box to clear the image.
     draw.rectangle((0,0,width,height), outline=0, fill=0)
     # Draw current page indicator
     if showPageIndicator:
@@ -218,6 +224,7 @@ def update_page_index(pi):
 
 def receive_signal(signum, stack):
     global pageIndex
+    global lastPressed
 
     lock.acquire()
     page_index = pageIndex
@@ -225,6 +232,8 @@ def receive_signal(signum, stack):
 
     if page_index==5:
         return
+
+    lastPressed = time()
 
     if signum == signal.SIGUSR1:
         print 'K1 pressed'
@@ -244,7 +253,7 @@ def receive_signal(signum, stack):
             if page_index==4:
                 update_page_index(5)
                 draw_page()
- 
+
             else:
                 update_page_index(0)
                 draw_page()
@@ -272,6 +281,12 @@ signal.signal(signal.SIGALRM, receive_signal)
 
 while True:
     try:
+       if lastPressed:
+           if time() - lastPressed > screenOffInterval:
+               oled.clearDisplay()
+               lastPressed = 0
+               continue
+
         draw_page()
 
         lock.acquire()
@@ -297,7 +312,7 @@ while True:
             os.system('systemctl poweroff')
             break
         time.sleep(1)
-    except KeyboardInterrupt:                                                                                                          
-        break                     
-    except IOError:                                                                              
+    except KeyboardInterrupt:
+        break
+    except IOError:
         print ("Error")
