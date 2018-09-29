@@ -38,7 +38,6 @@ import bakebit_128_64_oled as oled
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-from time import time
 import time
 import sys
 import subprocess
@@ -55,7 +54,7 @@ height=64
 global pageCount
 pageCount=2
 global pageIndex
-pageIndex=0
+pageIndex=1
 global showPageIndicator
 showPageIndicator=False
 
@@ -198,6 +197,9 @@ def draw_page():
     elif page_index==5:
         draw.text((2, 2),  'Shutting down',  font=fontb14, fill=255)
         draw.text((2, 20),  'Please wait',  font=font11, fill=255)
+    # clear the screen
+    elif page_index==6:
+       draw.rectangle((0,0,width,height), outline=0, fill=0)
 
     oled.drawImage(image)
 
@@ -233,7 +235,7 @@ def receive_signal(signum, stack):
     if page_index==5:
         return
 
-    lastPressed = time()
+    lastPressed = time.time()
 
     if signum == signal.SIGUSR1:
         print 'K1 pressed'
@@ -273,7 +275,7 @@ def receive_signal(signum, stack):
 
 image0 = Image.open('friendllyelec.png').convert('1')
 oled.drawImage(image0)
-time.sleep(2)
+time.sleep(5)
 
 signal.signal(signal.SIGUSR1, receive_signal)
 signal.signal(signal.SIGUSR2, receive_signal)
@@ -281,11 +283,10 @@ signal.signal(signal.SIGALRM, receive_signal)
 
 while True:
     try:
-       if lastPressed:
-           if time() - lastPressed > screenOffInterval:
-               oled.clearDisplay()
-               lastPressed = 0
-               continue
+        if lastPressed:
+            if time.time() - lastPressed > screenOffInterval:
+                lastPressed = 0
+                update_page_index(6)
 
         draw_page()
 
